@@ -38,19 +38,24 @@ class SyslogFS(fuse.Fuse):
 
   def chmod(self, path, mode):
     # print 'chmod path:%s mode:%s' % path, mode
+    return
 
   def chown(self, path, uid, gid):
     # print 'chown path:%s uid:%s gid:%s' % path, uid, gid
+    return
 
   def utime(self, path, times):
     # print 'utime path:%s times:%s' % path, times
+    return
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
     # print 'mkdir path:%s, mode:%s' % path, mode
+    return
 
   def rmdir(self, path):
     # print 'rmdir path:%s' % path
+    return
 
   def readdir(self, path, offset):
     # print 'readdir path:%s offset:%s' % path, offset
