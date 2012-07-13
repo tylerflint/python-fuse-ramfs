@@ -75,7 +75,8 @@ syslogfs - Syslog File-System
 """ + fuse.Fuse.fusage
   server = SyslogFS(version="%prog " + fuse.__version__,
                     usage=usage,
-                    dash_s_do='setsingle')
+                    dash_s_do='setsingle',
+                    foreground=True)
   
   args = server.parse(errex=1)
   server.main()
