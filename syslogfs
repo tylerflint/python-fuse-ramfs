@@ -12,18 +12,9 @@ import fuse
 # Specify what Fuse API use: 0.2
 fuse.fuse_python_api = (0, 2)
 
-def zstat(stat):
-  stat.st_mode  = 0
-  stat.st_ino   = 0
-  stat.st_dev   = 0
-  stat.st_nlink = 2
-  stat.st_uid   = 0
-  stat.st_gid   = 0
-  stat.st_size  = 0
-  stat.st_atime = 0
-  stat.st_mtime = 0
-  stat.st_ctime = 0
-  return stat
+import logging
+LOG_FILENAME = 'syslogfs.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
 
 class SyslogFS(fuse.Fuse):
 
