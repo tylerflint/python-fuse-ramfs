@@ -39,7 +39,7 @@ class SyslogFS(fuse.Fuse):
     return st
 
   def chmod(self, path, mode):
-    logger.info('chmod', path, mode)
+    logger.info('chmod %s %s' % path mode)
     return
 
   def chown(self, path, uid, gid):
@@ -60,7 +60,7 @@ class SyslogFS(fuse.Fuse):
     return
 
   def readdir(self, path, offset):
-    logger.info('readdir', path, offset)
+    logger.info('readdir %s %s' % path offset)
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
 
