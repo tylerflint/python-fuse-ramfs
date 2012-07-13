@@ -39,7 +39,7 @@ class SyslogFS(fuse.Fuse):
     return st
 
   def chmod(self, path, mode):
-    logger.info('chmod %s %s' % (path mode))
+    logger.info('chmod %s %s' % (path, mode))
     return
 
   def chown(self, path, uid, gid):
