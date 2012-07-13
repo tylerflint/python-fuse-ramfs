@@ -32,28 +32,28 @@ class SyslogFS(fuse.Fuse):
 
   # --- Metadata -----------------------------------------------------------
   def getattr(self, path):
-    print 'gettattr %s' % path
+    # print 'gettattr %s' % path
     st = zstat(fuse.Stat())
     return st
 
   def chmod(self, path, mode):
-    print 'chmod path:%s mode:%s' % path, mode
+    # print 'chmod path:%s mode:%s' % path, mode
 
   def chown(self, path, uid, gid):
-    print 'chown path:%s uid:%s gid:%s' % path, uid, gid
+    # print 'chown path:%s uid:%s gid:%s' % path, uid, gid
 
   def utime(self, path, times):
-    print 'utime path:%s times:%s' % path, times
+    # print 'utime path:%s times:%s' % path, times
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
-    print 'mkdir path:%s, mode:%s' % path, mode
+    # print 'mkdir path:%s, mode:%s' % path, mode
 
   def rmdir(self, path):
-    print 'rmdir path:%s' % path
+    # print 'rmdir path:%s' % path
 
   def readdir(self, path, offset):
-    print 'readdir path:%s offset:%s' % path, offset
+    # print 'readdir path:%s offset:%s' % path, offset
     for item in '.', '..':
       yield fuse.Direntry(item)
 
