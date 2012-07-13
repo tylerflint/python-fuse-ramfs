@@ -40,8 +40,8 @@ class SyslogFS(fuse.Fuse):
 
   def readdir(self, path, offset):
     print 'readdir path:%s offset:%s' % path, offset
-    # for item in :
-    #   yield fuse.Direntry(item)
+    for item in '.', '..':
+      yield fuse.Direntry(item)
 
 def main():
   usage="""
