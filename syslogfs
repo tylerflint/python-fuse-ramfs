@@ -12,9 +12,14 @@ import fuse
 # Specify what Fuse API use: 0.2
 fuse.fuse_python_api = (0, 2)
 
+# wow, that's a lot of crap just to log
 import logging
-LOG_FILENAME = 'syslogfs.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+logger = logging.getLogger('syslogfs')
+hdlr = logging.FileHandler('syslogfs.log')
+formatter = logging.Formatter('%(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr) 
+logger.setLevel(logging.DEBUG)
 
 class SyslogFS(fuse.Fuse):
 
@@ -23,7 +28,7 @@ class SyslogFS(fuse.Fuse):
 
   # --- Metadata -----------------------------------------------------------
   def getattr(self, path):
-    print 'gettattr %s' % path
+    logger.info('gettattr %s' % path)
     st = fuse.Stat()
     st.st_mode = stat.S_IFDIR | 0755
     st.st_nlink = 2
@@ -34,28 +39,28 @@ class SyslogFS(fuse.Fuse):
     return st
 
   def chmod(self, path, mode):
-    print 'chmod', path, mode
+    logger.info('chmod', path, mode)
     return
 
   def chown(self, path, uid, gid):
-    print 'chown', path, uid, gid
+    logger.info('chown', path, uid, gid)
     return
 
   def utime(self, path, times):
-    print 'utime', path, times
+    logger.info('utime', path, times)
     return
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
-    print 'mkdir', path, mode
+    logger.info('mkdir', path, mode)
     return
 
   def rmdir(self, path):
-    print 'rmdir', path
+    logger.info('rmdir', path)
     return
 
   def readdir(self, path, offset):
-    print 'readdir', path, offset
+    logger.info('readdir', path, offset)
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
 
