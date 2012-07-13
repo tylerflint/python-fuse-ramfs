@@ -12,26 +12,40 @@ import fuse
 # Specify what Fuse API use: 0.2
 fuse.fuse_python_api = (0, 2)
 
-# def zstat(stat):
-#   stat.st_mode  = 0
-#   stat.st_ino   = 0
-#   stat.st_dev   = 0
-#   stat.st_nlink = 2
-#   stat.st_uid   = 0
-#   stat.st_gid   = 0
-#   stat.st_size  = 0
-#   stat.st_atime = 0
-#   stat.st_mtime = 0
-#   stat.st_ctime = 0
-#   return stat
+def zstat(stat):
+  stat.st_mode  = 0
+  stat.st_ino   = 0
+  stat.st_dev   = 0
+  stat.st_nlink = 2
+  stat.st_uid   = 0
+  stat.st_gid   = 0
+  stat.st_size  = 0
+  stat.st_atime = 0
+  stat.st_mtime = 0
+  stat.st_ctime = 0
+  return stat
 
 class SyslogFS(fuse.Fuse):
 
   def __init__(self, *args, **kwargs):
     fuse.Fuse.__init__(self, *args, **kwargs)
 
-  # directories
+  # --- Metadata -----------------------------------------------------------
+  def getattr(self, path):
+    print 'gettattr %s' % path
+    st = zstat(fuse.Stat())
+    return st
 
+  def chmod(self, path, mode):
+    print 'chmod path:%s mode:%s' % path, mode
+
+  def chown(self, path, uid, gid):
+    print 'chown path:%s uid:%s gid:%s' % path, uid, gid
+
+  def utime(self, path, times):
+    print 'utime path:%s times:%s' % path, times
+
+  # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
     print 'mkdir path:%s, mode:%s' % path, mode
 
@@ -39,7 +53,7 @@ class SyslogFS(fuse.Fuse):
     print 'rmdir path:%s' % path
 
   def readdir(self, path, offset):
-    # print 'readdir path:%s offset:%s' % path, offset
+    print 'readdir path:%s offset:%s' % path, offset
     for item in '.', '..':
       yield fuse.Direntry(item)
 
