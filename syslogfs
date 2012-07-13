@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+# How to mount the File-System:
+#   syslogfs mnt
+#
+# How to umount the File-System?
+#   fusermount -u mnt
+
+import os, sys, stat, errno, time
+import fuse
+
+# Specify what Fuse API use: 0.2
+fuse.fuse_python_api = (0, 2)
+
+# def zstat(stat):
+#   stat.st_mode  = 0
+#   stat.st_ino   = 0
+#   stat.st_dev   = 0
+#   stat.st_nlink = 2
+#   stat.st_uid   = 0
+#   stat.st_gid   = 0
+#   stat.st_size  = 0
+#   stat.st_atime = 0
+#   stat.st_mtime = 0
+#   stat.st_ctime = 0
+#   return stat
+
+class SyslogFS(fuse.Fuse):
+
+  def __init__(self, *args, **kwargs):
+    fuse.Fuse.__init__(self, *args, **kwargs)
+
+def main():
+  usage="""
+syslogfs - Syslog File-System
+
+""" + fuse.Fuse.fusage
+  server = SyslogFS(version="%prog " + fuse.__version__,
+                    usage=usage,
+                    dash_s_do='setsingle')
+  
+  args = server.parse(errex=1)
+  server.main()
+
+if __name__ == '__main__':
+  main()
+    
+      
+    
