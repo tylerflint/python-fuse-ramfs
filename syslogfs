@@ -65,7 +65,7 @@ class SyslogFS(fuse.Fuse):
 
   def readdir(self, path, offset):
     print 'readdir', path, offset
-    for item in '.', '..':
+    for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
 
 def main():
