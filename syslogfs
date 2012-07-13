@@ -39,28 +39,28 @@ class SyslogFS(fuse.Fuse):
     return st
 
   def chmod(self, path, mode):
-    logger.info('chmod %s %s' % path mode)
+    logger.info('chmod %s %s' % (path mode))
     return
 
   def chown(self, path, uid, gid):
-    logger.info('chown', path, uid, gid)
+    logger.info('chown %s' % (path, uid, gid))
     return
 
   def utime(self, path, times):
-    logger.info('utime', path, times)
+    logger.info('utime %s' % (path, times))
     return
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
-    logger.info('mkdir', path, mode)
+    logger.info('mkdir %s %s' % (path, mode))
     return
 
   def rmdir(self, path):
-    logger.info('rmdir', path)
+    logger.info('rmdir %s' % path)
     return
 
   def readdir(self, path, offset):
-    logger.info('readdir %s %s' % path offset)
+    logger.info('readdir %s %s' % (path, offset))
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
 
