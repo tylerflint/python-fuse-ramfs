@@ -60,6 +60,7 @@ class SyslogFS(fuse.Fuse):
     return
 
   def readdir(self, path, offset):
+    time.sleep( 20 )
     logger.info('readdir %s %s' % (path, offset))
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
