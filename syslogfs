@@ -13,7 +13,7 @@ import fuse
 fuse.fuse_python_api = (0, 2)
 
 # redirect stdout to a log
-sys.stdout = os.fdopen('syslogfs.log', 'a', 0)
+sys.stdout = os.fdopen(open('syslogfs.log', 'a'), 'w', 0)
 
 class SyslogFS(fuse.Fuse):
 
