@@ -12,14 +12,8 @@ import fuse
 # Specify what Fuse API use: 0.2
 fuse.fuse_python_api = (0, 2)
 
-# wow, that's a lot of crap just to log
-import logging
-logger = logging.getLogger('syslogfs')
-hdlr = logging.FileHandler('syslogfs.log')
-formatter = logging.Formatter('%(message)s')
-hdlr.setFormatter(formatter)
-logger.addHandler(hdlr) 
-logger.setLevel(logging.DEBUG)
+# redirect stdout to a log
+sys.stdout = open('syslogfs.log', 'a')
 
 class SyslogFS(fuse.Fuse):
 
@@ -27,13 +21,14 @@ class SyslogFS(fuse.Fuse):
     fuse.Fuse.__init__(self, *args, **kwargs)
 
   def fsinit(self):
-    # supposedly threads need to be initialized here ?
-    logger.info('fsinit')
+    # background threads need to be initialized here
+    # this is where we will spawn our persistence thread
+    print 'fsinit'
     return
 
   # --- Metadata -----------------------------------------------------------
   def getattr(self, path):
-    logger.info('gettattr %s' % path)
+    print 'gettattr %s' % path
     st = fuse.Stat()
     st.st_mode = stat.S_IFDIR | 0755
     st.st_nlink = 2
@@ -44,30 +39,30 @@ class SyslogFS(fuse.Fuse):
     return st
 
   def chmod(self, path, mode):
-    logger.info('chmod %s %s' % (path, mode))
+    print 'chmod %s %s' % (path, mode)
     return
 
   def chown(self, path, uid, gid):
-    logger.info('chown %s' % (path, uid, gid))
+    print 'chown %s' % (path, uid, gid)
     return
 
   def utime(self, path, times):
-    logger.info('utime %s' % (path, times))
+    print 'utime %s' % (path, times)
     return
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
-    logger.info('mkdir %s %s' % (path, mode))
+    print 'mkdir %s %s' % (path, mode)
     return
 
   def rmdir(self, path):
-    logger.info('rmdir %s' % path)
+    print 'rmdir %s' % path
     return
 
   def readdir(self, path, offset):
     if path == '/red':
       time.sleep( 20 )
-    logger.info('readdir %s %s' % (path, offset))
+    print 'readdir %s %s' % (path, offset)
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
 
