@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 # How to mount the File-System:
-#   syslogfs mnt
+#   syslogfs mountpoint
 #
 # How to umount the File-System?
-#   fusermount -u mnt
+#   umount mountpoint
 
 import os, sys, stat, errno, time
 import fuse
@@ -12,8 +12,44 @@ import fuse
 # Specify what Fuse API use: 0.2
 fuse.fuse_python_api = (0, 2)
 
-# redirect stdout to a log
-sys.stdout = os.fdopen(open('syslogfs.log', 'a'), 'w', 0)
+# redirect stdout to a log (unbuffered)
+sys.stdout = open('syslogfs.log', 'a', 0)
+
+class Inode(object):
+
+  def __init__(self, mode, uid, gid):
+    # Metadata 
+    self.atime = time.time()   # time of last acces
+    self.mtime = self.atime    # time of last modification
+    self.ctime = self.atime    # time of last status change
+
+    self.dev  = 0        # device ID (if special file)
+    self.mode = mode     # protection and file-type
+    self.uid  = uid      # user ID of owner
+    self.gid  = gid      # group ID of owner
+
+    # Extended Attributes
+    self.xattr = {}
+
+    # Data 
+    if stat.S_ISDIR(mode):
+      self.data = set()
+    else:
+      self.data = ''
+
+  def stat(self):
+    stat = fuse.Stat()
+    stat.st_mode  = self.mode       # protection bits
+    stat.st_ino   = 0               # inode number
+    stat.st_dev   = self.dev        # device
+    stat.st_nlink = 2               # number of hard links
+    stat.st_uid   = self.uid        # user ID of owner
+    stat.st_gid   = self.gid        # group ID of owner
+    stat.st_size  = len(self.data)  # size of file, in bytes
+    stat.st_atime = self.atime      # time of most recent access
+    stat.st_mtime = self.mtime      # time of most recent content modification
+    stat.st_ctime = self.ctime      # platform dependent; time of most recent metadata change on Unix, or the time of creation on Windows
+    return stat
 
 class SyslogFS(fuse.Fuse):
 
@@ -23,48 +59,96 @@ class SyslogFS(fuse.Fuse):
   def fsinit(self):
     # background threads need to be initialized here
     # this is where we will spawn our persistence thread
+    # 
+    # also, this is where we should initialize the fs (ie: create root and hierarchy)
     print 'fsinit'
     return
 
   # --- Metadata -----------------------------------------------------------
   def getattr(self, path):
-    print 'gettattr %s' % path
-    st = fuse.Stat()
-    st.st_mode = stat.S_IFDIR | 0755
-    st.st_nlink = 2
-    st.st_atime = int(time.time())
-    st.st_mtime = st.st_atime
-    st.st_ctime = st.st_atime
-
-    return st
+    print 'getattr path:%s' % path
+    return -errno.ENOSYS
 
   def chmod(self, path, mode):
-    print 'chmod %s %s' % (path, mode)
-    return
+    print 'chmod path:%s mode:%s' % (path, mode)
+    return -errno.ENOSYS    
 
   def chown(self, path, uid, gid):
-    print 'chown %s' % (path, uid, gid)
-    return
+    print 'chown path:%s uid:%s gid:%s' % (path, uid, gid)
+    return -errno.ENOSYS
 
   def utime(self, path, times):
-    print 'utime %s' % (path, times)
-    return
+    print 'utime path:%s times:%s' % (path, times)
+    return -errno.ENOSYS
 
-  # --- Directories -------------------------------------------------------
+  # --- Namespace ----------------------------------------------------------
+  def unlink(self, path):
+    print 'unlink path:%s' % path
+    return -errno.ENOSYS
+
+  def rename(self, oldpath, newpath):
+    print 'rename oldpath:%s newpath:%s' % (oldpath, newpath)
+    return -errno.ENOSYS
+
+  # --- Links --------------------------------------------------------------
+  def symlink(self, path, newpath):
+    print 'symlink path:%s newpath:%s' % (path, newpath)
+    return -errno.ENOSYS
+
+  def readlink(self, path):
+    print 'readlink path:%s' % path
+    return -errno.ENOSYS
+
+  # --- Extra Attributes ---------------------------------------------------
+  def setxattr(self, path, name, value, flags):
+    print 'setxattr path:%s name:%s value:%s flags:%s' % (path, name, value, flags)
+    return -errno.ENOSYS
+
+  def getxattr(self, path, name, size):
+    print 'getxattr path:%s name:%s size:%s' % (path, name, size)
+    return -errno.ENOSYS
+
+  def listxattr(self, path, size):
+    print 'listxattr path:%s size:%s' % (path, size)
+    return -errno.ENOSYS
+
+  def removexattr(self, path, name):
+    print 'removexattr path:%s name:%s' % (path, name)
+    return -errno.ENOSYS
+
+  # --- Files --------------------------------------------------------------
+  def mknod(self, path, mode, dev):
+    print 'mknod path:%s mode:%s dev:%s' % (path, mode, dev)
+    return -errno.ENOSYS
+
+  def create(self, path, flags, mode):
+    print 'create path:%s flags:%s mode:%s' % (path, flags, mode)
+    return -errno.ENOSYS
+
+  def truncate(self, path, len):
+    print 'truncate path:%s len:%s' % (path, len)
+    return -errno.ENOSYS
+
+  def read(self, path, size, offset):
+    print 'truncate path:%s size:%s offset:%s' % (path, size, offset)
+    return -errno.ENOSYS
+
+  def write(self, path, buf, offset):
+    print 'write path:%s buf:%s offset:%s' % (path, buff, offset)
+    return -errno.ENOSYS
+
+  # --- Directories --------------------------------------------------------
   def mkdir(self, path, mode):
-    print 'mkdir %s %s' % (path, mode)
-    return
+    print 'mkdir path:%s mode:%s' % (path, mode)
+    return -errno.ENOSYS
 
   def rmdir(self, path):
-    print 'rmdir %s' % path
-    return
+    print 'rmdir path:%s' % path
+    return -errno.ENOSYS
 
   def readdir(self, path, offset):
-    if path == '/red':
-      time.sleep( 20 )
-    print 'readdir %s %s' % (path, offset)
-    for item in '.', '..', 'red', 'green':
-      yield fuse.Direntry(item)
+    print 'readdir path:%s offset:%s' % (path, offset)
+    return -errno.ENOSYS
 
 def main():
   usage="""
