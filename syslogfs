@@ -52,7 +52,6 @@ class SyslogFS(fuse.Fuse):
 
   # --- Directories -------------------------------------------------------
   def mkdir(self, path, mode):
-    time.sleep( 5 )
     logger.info('mkdir %s %s' % (path, mode))
     return
 
@@ -61,6 +60,8 @@ class SyslogFS(fuse.Fuse):
     return
 
   def readdir(self, path, offset):
+    if path == '/red':
+      time.sleep( 5 )
     logger.info('readdir %s %s' % (path, offset))
     for item in '.', '..', 'red', 'green':
       yield fuse.Direntry(item)
