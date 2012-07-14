@@ -26,6 +26,11 @@ class SyslogFS(fuse.Fuse):
   def __init__(self, *args, **kwargs):
     fuse.Fuse.__init__(self, *args, **kwargs)
 
+  def fsinit(self):
+    # supposedly threads need to be initialized here ?
+    logger.info('fsinit')
+    return
+
   # --- Metadata -----------------------------------------------------------
   def getattr(self, path):
     logger.info('gettattr %s' % path)
