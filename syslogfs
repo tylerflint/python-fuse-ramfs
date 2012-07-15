@@ -17,12 +17,18 @@ sys.stdout = open('syslogfs.log', 'a', 0)
 
 class Inode(object):
 
-  def __init__(self, mode, uid, gid):
+  DIR  = 'dir'
+  FILE = 'file'
+  LINK = 'link'
+
+  def __init__(self, type, name, mode, uid, gid):
     # Metadata 
     self.atime = time.time()   # time of last acces
     self.mtime = self.atime    # time of last modification
     self.ctime = self.atime    # time of last status change
 
+    self.type = type
+    self.name = name     # file name
     self.dev  = 0        # device ID (if special file)
     self.mode = mode     # protection and file-type
     self.uid  = uid      # user ID of owner
@@ -51,23 +57,43 @@ class Inode(object):
     stat.st_ctime = self.ctime      # platform dependent; time of most recent metadata change on Unix, or the time of creation on Windows
     return stat
 
+  def child(self, path):
+    match = None
+    if self.type == Inode.DIR:
+      nodes = path.split('/')
+      print nodes
+      for child in self.data:
+        if child.name == nodes[0]:
+          if len(nodes) > 1:
+            match = child.child('/'.join(nodes[1:]))
+          else:
+            match = child
+    return match
+
 class SyslogFS(fuse.Fuse):
 
   def __init__(self, *args, **kwargs):
     fuse.Fuse.__init__(self, *args, **kwargs)
 
+    self.uid = os.getuid()
+    self.gid = os.getgid()
+
   def fsinit(self):
+    print 'fsinit'
+    # initialize the root inode
+    self.root = Inode(Inode.DIR, 'root', 0755 | stat.S_IFDIR, self.uid, self.gid)
+
     # background threads need to be initialized here
     # this is where we will spawn our persistence thread
-    # 
-    # also, this is where we should initialize the fs (ie: create root and hierarchy)
-    print 'fsinit'
-    return
 
-  # --- Metadata -----------------------------------------------------------
+  # --- Metadata 
   def getattr(self, path):
     print 'getattr path:%s' % path
-    return -errno.ENOSYS
+    node = self._node(path)
+    if not node:
+      return -errno.ENOENT
+    else:
+      return node.stat()
 
   def chmod(self, path, mode):
     print 'chmod path:%s mode:%s' % (path, mode)
@@ -81,7 +107,7 @@ class SyslogFS(fuse.Fuse):
     print 'utime path:%s times:%s' % (path, times)
     return -errno.ENOSYS
 
-  # --- Namespace ----------------------------------------------------------
+  # --- Namespace 
   def unlink(self, path):
     print 'unlink path:%s' % path
     return -errno.ENOSYS
@@ -90,7 +116,7 @@ class SyslogFS(fuse.Fuse):
     print 'rename oldpath:%s newpath:%s' % (oldpath, newpath)
     return -errno.ENOSYS
 
-  # --- Links --------------------------------------------------------------
+  # --- Links 
   def symlink(self, path, newpath):
     print 'symlink path:%s newpath:%s' % (path, newpath)
     return -errno.ENOSYS
@@ -99,7 +125,7 @@ class SyslogFS(fuse.Fuse):
     print 'readlink path:%s' % path
     return -errno.ENOSYS
 
-  # --- Extra Attributes ---------------------------------------------------
+  # --- Extra Attributes 
   def setxattr(self, path, name, value, flags):
     print 'setxattr path:%s name:%s value:%s flags:%s' % (path, name, value, flags)
     return -errno.ENOSYS
@@ -116,7 +142,7 @@ class SyslogFS(fuse.Fuse):
     print 'removexattr path:%s name:%s' % (path, name)
     return -errno.ENOSYS
 
-  # --- Files --------------------------------------------------------------
+  # --- Files 
   def mknod(self, path, mode, dev):
     print 'mknod path:%s mode:%s dev:%s' % (path, mode, dev)
     return -errno.ENOSYS
@@ -137,10 +163,19 @@ class SyslogFS(fuse.Fuse):
     print 'write path:%s buf:%s offset:%s' % (path, buff, offset)
     return -errno.ENOSYS
 
-  # --- Directories --------------------------------------------------------
+  # --- Directories 
   def mkdir(self, path, mode):
     print 'mkdir path:%s mode:%s' % (path, mode)
-    return -errno.ENOSYS
+    parent_path = os.path.dirname(path)
+    filename    = os.path.basename(path)
+    parent      = self._node(parent_path)
+    if not parent:
+      return -errno.ENOENT
+    if not parent.type == Inode.DIR:
+      return -errno.ENOTDIR
+    else:
+      node = Inode(Inode.DIR, filename, mode | stat.S_IFDIR, self.uid, self.gid)
+      parent.data.add(node)
 
   def rmdir(self, path):
     print 'rmdir path:%s' % path
@@ -148,7 +183,21 @@ class SyslogFS(fuse.Fuse):
 
   def readdir(self, path, offset):
     print 'readdir path:%s offset:%s' % (path, offset)
-    return -errno.ENOSYS
+    node = self._node(path)
+    if node.type == Inode.DIR:
+      for meta in ['.', '..']:
+        yield fuse.Direntry(meta)
+      for child in node.data:
+        yield fuse.Direntry(child.name) 
+    else:
+      yield fuse.Direntry(node.name)
+
+  # --- Tree Helpers
+  def _node(self, path):
+    if path == '/':
+      return self.root
+    else:
+      return self.root.child(path[1:])
 
 def main():
   usage="""
