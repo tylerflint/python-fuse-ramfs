@@ -61,7 +61,6 @@ class Inode(object):
     match = None
     if self.type == Inode.DIR:
       nodes = path.split('/')
-      print nodes
       for child in self.data:
         if child.name == nodes[0]:
           if len(nodes) > 1:
@@ -166,24 +165,41 @@ class SyslogFS(fuse.Fuse):
   # --- Directories 
   def mkdir(self, path, mode):
     print 'mkdir path:%s mode:%s' % (path, mode)
+
     parent_path = os.path.dirname(path)
     filename    = os.path.basename(path)
     parent      = self._node(parent_path)
+
     if not parent:
       return -errno.ENOENT
+
     if not parent.type == Inode.DIR:
       return -errno.ENOTDIR
-    else:
-      node = Inode(Inode.DIR, filename, mode | stat.S_IFDIR, self.uid, self.gid)
-      parent.data.add(node)
+
+    node = Inode(Inode.DIR, filename, mode | stat.S_IFDIR, self.uid, self.gid)
+    parent.data.add(node)
 
   def rmdir(self, path):
     print 'rmdir path:%s' % path
-    return -errno.ENOSYS
+
+    parent_path = os.path.dirname(path)
+    parent      = self._node(parent_path)
+    node        = self._node(path)
+
+    if not (parent or node):
+      return -errno.ENOENT
+
+    if not node.type == Inode.DIR:
+      return -errno.ENOTDIR
+    
+    parent.data.remove(node)
+
 
   def readdir(self, path, offset):
     print 'readdir path:%s offset:%s' % (path, offset)
+
     node = self._node(path)
+
     if node.type == Inode.DIR:
       for meta in ['.', '..']:
         yield fuse.Direntry(meta)
