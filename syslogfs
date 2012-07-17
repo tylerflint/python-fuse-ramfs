@@ -17,305 +17,306 @@ sys.stdout = open('syslogfs.log', 'a', 0)
 
 class Inode(object):
 
-  DIR  = 'dir'
-  FILE = 'file'
-  LINK = 'link'
+    DIR  = 'dir'
+    FILE = 'file'
+    LINK = 'link'
 
-  def __init__(self, type, name, mode, uid, gid):
+    def __init__(self, type, name, mode, uid, gid):
 
-    self.type = type
-    self.name = name     # file name
-    self.dev  = 0        # device ID (if special file)
-    self.mode = mode     # protection and file-type
-    self.uid  = uid      # user ID of owner
-    self.gid  = gid      # group ID of owner
+        self.type = type
+        self.name = name     # file name
+        self.dev  = 0        # device ID (if special file)
+        self.mode = mode     # protection and file-type
+        self.uid  = uid      # user ID of owner
+        self.gid  = gid      # group ID of owner
 
-    self.now()
+        self.now()
 
-    # Extended Attributes
-    self.xattr = {}
+        # Extended Attributes
+        self.xattr = {}
 
-    # Data 
-    if stat.S_ISDIR(mode):
-      self.data = set()
-    else:
-      self.data = ''
+        # Data 
+        if stat.S_ISDIR(mode):
+            self.data = set()
+        else:
+            self.data = ''
 
-  def now(self):
-    self.atime = time.time()   # time of last acces
-    self.mtime = self.atime    # time of last modification
-    self.ctime = self.atime    # time of last status change
+    def now(self):
+        self.atime = time.time()   # time of last acces
+        self.mtime = self.atime    # time of last modification
+        self.ctime = self.atime    # time of last status change
 
-  def stat(self):
-    stat = fuse.Stat()
-    stat.st_mode  = self.mode       # protection bits
-    stat.st_ino   = 0               # inode number
-    stat.st_dev   = self.dev        # device
-    stat.st_nlink = 2               # number of hard links
-    stat.st_uid   = self.uid        # user ID of owner
-    stat.st_gid   = self.gid        # group ID of owner
-    stat.st_size  = len(self.data)  # size of file, in bytes
-    stat.st_atime = self.atime      # time of most recent access
-    stat.st_mtime = self.mtime      # time of most recent content modification
-    stat.st_ctime = self.ctime      # platform dependent; time of most recent metadata change on Unix, or the time of creation on Windows
-    return stat
+    def stat(self):
+        stat = fuse.Stat()
+        stat.st_mode  = self.mode       # protection bits
+        stat.st_ino   = 0               # inode number
+        stat.st_dev   = self.dev        # device
+        stat.st_nlink = 2               # number of hard links
+        stat.st_uid   = self.uid        # user ID of owner
+        stat.st_gid   = self.gid        # group ID of owner
+        stat.st_size  = len(self.data)  # size of file, in bytes
+        stat.st_atime = self.atime      # time of most recent access
+        stat.st_mtime = self.mtime      # time of most recent content modification
+        stat.st_ctime = self.ctime      # platform dependent; time of most recent metadata change on Unix, or the time of creation on Windows
+        return stat
 
-  def child(self, path):
-    match = None
-    if self.type == Inode.DIR:
-      nodes = path.split('/')
-      for child in self.data:
-        if child.name == nodes[0]:
-          if len(nodes) > 1:
-            match = child.child('/'.join(nodes[1:]))
-          else:
-            match = child
-    return match
+    def child(self, path):
+        match = None
+        if self.type == Inode.DIR:
+            nodes = path.split('/')
+            for child in self.data:
+                if child.name == nodes[0]:
+                    if len(nodes) > 1:
+                        match = child.child('/'.join(nodes[1:]))
+                    else:
+                        match = child
+        return match
 
-  def read(self, offset, length):
-    stat.st_atime = time.now()
-    return self.data[offset:offset+length]
+    def read(self, offset, length):
+        stat.st_atime = time.now()
+        return self.data[offset:offset+length]
 
-  def write(self, offset, data):
-    length = len(data)
-    self.data = self.data[:offset] + data + self.data[offset+length:]
-    self.now()
-    return length
+    def write(self, offset, data):
+        length = len(data)
+        self.data = self.data[:offset] + data + self.data[offset+length:]
+        self.now()
+        return length
 
-  def truncate(self, length):
-    self.data = self.data[0:length]
-    self.now()
+    def truncate(self, length):
+        self.data = self.data[0:length]
+        self.now()
 
 
 class SyslogFS(fuse.Fuse):
 
-  def __init__(self, *args, **kwargs):
-    fuse.Fuse.__init__(self, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        fuse.Fuse.__init__(self, *args, **kwargs)
 
-    self.uid = os.getuid()
-    self.gid = os.getgid()
+        self.uid = os.getuid()
+        self.gid = os.getgid()
 
-  def fsinit(self):
-    # print 'fsinit'
-    # initialize the root inode
-    self.root = Inode(Inode.DIR, 'root', 0755 | stat.S_IFDIR, self.uid, self.gid)
+    def fsinit(self):
+        # print 'fsinit'
+        # initialize the root inode
+        self.root = Inode(Inode.DIR, 'root', 0755 | stat.S_IFDIR, self.uid, self.gid)
 
-    # background threads need to be initialized here
-    # this is where we will spawn our persistence thread
+        # background threads need to be initialized here
+        # this is where we will spawn our persistence thread
 
-  # --- Metadata 
-  def getattr(self, path):
-    print 'getattr path:%s' % path
-    node = self._node(path)
-    if not node:
-      return -errno.ENOENT
-    else:
-      return node.stat()
+    # --- Metadata 
+    def getattr(self, path):
+        print 'getattr path:%s' % path
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+        else:
+            return node.stat()
 
-  def chmod(self, path, mode):
-    print 'chmod path:%s mode:%s' % (path, mode)
-    return -errno.ENOSYS    
+    def chmod(self, path, mode):
+        print 'chmod path:%s mode:%s' % (path, mode)
+        return -errno.ENOSYS    
 
-  def chown(self, path, uid, gid):
-    print 'chown path:%s uid:%s gid:%s' % (path, uid, gid)
-    return -errno.ENOSYS
+    def chown(self, path, uid, gid):
+        print 'chown path:%s uid:%s gid:%s' % (path, uid, gid)
+        return -errno.ENOSYS
 
-  def utime(self, path, times):
-    print 'utime path:%s times:%s' % (path, times)
-    return -errno.ENOSYS
+    def utime(self, path, times):
+        print 'utime path:%s times:%s' % (path, times)
+        return -errno.ENOSYS
 
-  # --- Namespace 
-  def unlink(self, path):
-    print 'unlink path:%s' % path
+    # --- Namespace 
+    def unlink(self, path):
+        print 'unlink path:%s' % path
 
-    parent = self._parent(path)
-    child  = self._node(path)
+        parent = self._parent(path)
+        child  = self._node(path)
 
-    if not (parent or child):
-      return -errno.ENOENT
+        if not (parent or child):
+            return -errno.ENOENT
 
-    parent.data.remove(child)
+        parent.data.remove(child)
 
-  def rename(self, oldpath, newpath):
-    print 'rename oldpath:%s newpath:%s' % (oldpath, newpath)
+    def rename(self, oldpath, newpath):
+        print 'rename oldpath:%s newpath:%s' % (oldpath, newpath)
 
-    filename   = os.path.basename(newpath)
-    old_parent = self._parent(oldpath)
-    new_parent = self._parent(newpath)
-    node       = self._node(oldpath) 
+        filename   = os.path.basename(newpath)
+        old_parent = self._parent(oldpath)
+        new_parent = self._parent(newpath)
+        node       = self._node(oldpath) 
 
-    if not (old_parent or new_parent or node):
-      return -errno.ENOENT
+        if not (old_parent or new_parent or node):
+            return -errno.ENOENT
 
-    if not new_parent.type == Inode.DIR:
-      return -errno.ENOTDIR
+        if not new_parent.type == Inode.DIR:
+            return -errno.ENOTDIR
 
-    node.name = filename
-    old_parent.data.remove(node)
-    new_parent.data.add(node)
+        node.name = filename
+        old_parent.data.remove(node)
+        new_parent.data.add(node)
 
-  # --- Links 
-  def symlink(self, path, newpath):
-    print 'symlink path:%s newpath:%s' % (path, newpath)
-    return -errno.ENOSYS
+    # --- Links 
+    def symlink(self, path, newpath):
+        print 'symlink path:%s newpath:%s' % (path, newpath)
 
-  def readlink(self, path):
-    print 'readlink path:%s' % path
-    return -errno.ENOSYS
+        return -errno.ENOSYS
 
-  # --- Extra Attributes 
-  def setxattr(self, path, name, value, flags):
-    print 'setxattr path:%s name:%s value:%s flags:%s' % (path, name, value, flags)
-    return -errno.ENOSYS
+    def readlink(self, path):
+        print 'readlink path:%s' % path
+        return -errno.ENOSYS
 
-  def getxattr(self, path, name, size):
-    print 'getxattr path:%s name:%s size:%s' % (path, name, size)
-    return -errno.ENOSYS
+    # --- Extra Attributes 
+    def setxattr(self, path, name, value, flags):
+        print 'setxattr path:%s name:%s value:%s flags:%s' % (path, name, value, flags)
+        return -errno.ENOSYS
 
-  def listxattr(self, path, size):
-    print 'listxattr path:%s size:%s' % (path, size)
-    return -errno.ENOSYS
+    def getxattr(self, path, name, size):
+        print 'getxattr path:%s name:%s size:%s' % (path, name, size)
+        return -errno.ENOSYS
 
-  def removexattr(self, path, name):
-    print 'removexattr path:%s name:%s' % (path, name)
-    return -errno.ENOSYS
+    def listxattr(self, path, size):
+        print 'listxattr path:%s size:%s' % (path, size)
+        return -errno.ENOSYS
 
-  # --- Files 
+    def removexattr(self, path, name):
+        print 'removexattr path:%s name:%s' % (path, name)
+        return -errno.ENOSYS
 
-  # this appears to be the fallback if create fails
-  def mknod(self, path, mode, dev):
-    print 'mknod path:%s mode:%s dev:%s' % (path, mode, dev)
+    # --- Files 
 
-    filename    = os.path.basename(path)
-    parent      = self._node(path)
+    # this appears to be the fallback if create fails
+    def mknod(self, path, mode, dev):
+        print 'mknod path:%s mode:%s dev:%s' % (path, mode, dev)
 
-    if not parent:
-      return -errno.ENOENT
+        filename    = os.path.basename(path)
+        parent      = self._node(path)
 
-    if not parent.type == Inode.DIR:
-      return -errno.ENOTDIR
+        if not parent:
+            return -errno.ENOENT
 
-    node = Inode(Inode.FILE, filename, mode, self.uid, self.gid)
-    node.dev = dev
-    parent.data.add(node)        
+        if not parent.type == Inode.DIR:
+            return -errno.ENOTDIR
 
-    return -errno.ENOSYS
+        node = Inode(Inode.FILE, filename, mode, self.uid, self.gid)
+        node.dev = dev
+        parent.data.add(node)        
 
-  def create(self, path, flags, mode):
-    print 'create path:%s flags:%s mode:%s' % (path, flags, mode)
+        return -errno.ENOSYS
 
-    filename = os.path.basename(path)
-    parent   = self._parent(path)
+    def create(self, path, flags, mode):
+        print 'create path:%s flags:%s mode:%s' % (path, flags, mode)
 
-    if not parent:
-      return -errno.ENOENT
+        filename = os.path.basename(path)
+        parent   = self._parent(path)
 
-    if not parent.type == Inode.DIR:
-      return -errno.ENOTDIR
+        if not parent:
+            return -errno.ENOENT
 
-    node = Inode(Inode.FILE, filename, mode | stat.S_IFREG, self.uid, self.gid)
-    parent.data.add(node)
+        if not parent.type == Inode.DIR:
+            return -errno.ENOTDIR
 
-  def truncate(self, path, len):
-    print 'truncate path:%s len:%s' % (path, len)
+        node = Inode(Inode.FILE, filename, mode | stat.S_IFREG, self.uid, self.gid)
+        parent.data.add(node)
 
-    node = self._node(path)
+    def truncate(self, path, len):
+        print 'truncate path:%s len:%s' % (path, len)
 
-    if not node:
-      return -errno.ENOENT
+        node = self._node(path)
 
-    node.truncate(len)
+        if not node:
+            return -errno.ENOENT
 
-
-  def read(self, path, size, offset):
-    print 'truncate path:%s size:%s offset:%s' % (path, size, offset)
-
-    node = self._node(path)
-
-    if not node:
-      return -errno.ENOENT
-
-    return node.read(offset, offset, size)
-
-  def write(self, path, buf, offset):
-    print 'write path:%s buf:%s offset:%s' % (path, buf, offset)
-
-    node = self._node(path)
-
-    if not node:
-      return -errno.ENOENT
-
-    return node.write(offset, buf)
-
-  # --- Directories 
-  def mkdir(self, path, mode):
-    # print 'mkdir path:%s mode:%s' % (path, mode)
-
-    filename    = os.path.basename(path)
-    parent      = self._parent(path)
-
-    if not parent:
-      return -errno.ENOENT
-
-    if not parent.type == Inode.DIR:
-      return -errno.ENOTDIR
-
-    node = Inode(Inode.DIR, filename, mode | stat.S_IFDIR, self.uid, self.gid)
-    parent.data.add(node)
-
-  def rmdir(self, path):
-    # print 'rmdir path:%s' % path
-
-    parent      = self._parent(path)
-    node        = self._node(path)
-
-    if not (parent or node):
-      return -errno.ENOENT
-
-    if not node.type == Inode.DIR:
-      return -errno.ENOTDIR
-    
-    parent.data.remove(node)
+        node.truncate(len)
 
 
-  def readdir(self, path, offset):
-    # print 'readdir path:%s offset:%s' % (path, offset)
+    def read(self, path, size, offset):
+        print 'truncate path:%s size:%s offset:%s' % (path, size, offset)
 
-    node = self._node(path)
+        node = self._node(path)
 
-    if node.type == Inode.DIR:
-      for meta in ['.', '..']:
-        yield fuse.Direntry(meta)
-      for child in node.data:
-        yield fuse.Direntry(child.name) 
-    else:
-      yield fuse.Direntry(node.name)
+        if not node:
+            return -errno.ENOENT
 
-  # --- Tree Helpers
-  def _node(self, path):
-    if path == '/':
-      return self.root
-    else:
-      return self.root.child(path[1:])
+        return node.read(offset, offset, size)
 
-  def _parent(self, path):
-    parent_path = os.path.dirname(path)
-    return self._node(parent_path)
+    def write(self, path, buf, offset):
+        print 'write path:%s buf:%s offset:%s' % (path, buf, offset)
+
+        node = self._node(path)
+
+        if not node:
+            return -errno.ENOENT
+
+        return node.write(offset, buf)
+
+    # --- Directories 
+    def mkdir(self, path, mode):
+        # print 'mkdir path:%s mode:%s' % (path, mode)
+
+        filename    = os.path.basename(path)
+        parent      = self._parent(path)
+
+        if not parent:
+            return -errno.ENOENT
+
+        if not parent.type == Inode.DIR:
+            return -errno.ENOTDIR
+
+        node = Inode(Inode.DIR, filename, mode | stat.S_IFDIR, self.uid, self.gid)
+        parent.data.add(node)
+
+    def rmdir(self, path):
+        # print 'rmdir path:%s' % path
+
+        parent      = self._parent(path)
+        node        = self._node(path)
+
+        if not (parent or node):
+            return -errno.ENOENT
+
+        if not node.type == Inode.DIR:
+            return -errno.ENOTDIR
+        
+        parent.data.remove(node)
+
+
+    def readdir(self, path, offset):
+        # print 'readdir path:%s offset:%s' % (path, offset)
+
+        node = self._node(path)
+
+        if node.type == Inode.DIR:
+            for meta in ['.', '..']:
+                yield fuse.Direntry(meta)
+            for child in node.data:
+                yield fuse.Direntry(child.name) 
+        else:
+            yield fuse.Direntry(node.name)
+
+    # --- Tree Helpers
+    def _node(self, path):
+        if path == '/':
+            return self.root
+        else:
+            return self.root.child(path[1:])
+
+    def _parent(self, path):
+        parent_path = os.path.dirname(path)
+        return self._node(parent_path)
 
 def main():
-  usage="""
+    usage="""
 syslogfs - Syslog File-System
 
 """ + fuse.Fuse.fusage
-  server = SyslogFS(version="%prog " + fuse.__version__,
-                    usage=usage,
-                    dash_s_do='setsingle')
+    server = SyslogFS(  version="%prog " + fuse.__version__,
+                        usage=usage,
+                        dash_s_do='setsingle')
   
-  args = server.parse(errex=1)
-  server.main()
+    args = server.parse(errex=1)
+    server.main()
 
 if __name__ == '__main__':
-  main()
+    main()
     
       
     
