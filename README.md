@@ -1,4 +1,6 @@
 syslogfs
 ========
 
-FUSE filesystem that turns files into syslog collectors 
+FUSE filesystem that runs entirely in RAM
+
+Pretty pointless but a nice template for FUSE filesystems
