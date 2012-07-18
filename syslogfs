@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # How to mount the File-System:
-#   syslogfs mountpoint
+#   ramfs mountpoint
 #
 # How to umount the File-System?
 #   umount mountpoint
@@ -87,7 +87,7 @@ class Inode(object):
         self.now()
 
 
-class SyslogFS(fuse.Fuse):
+class RamFS(fuse.Fuse):
 
     def __init__(self, *args, **kwargs):
         fuse.Fuse.__init__(self, *args, **kwargs)
@@ -363,7 +363,7 @@ class SyslogFS(fuse.Fuse):
 
 def usage():
     usage = '''
-syslogfs - Syslog File-System
+ramfs - File-System in RAM
 
     '''
     return usage
@@ -371,7 +371,7 @@ syslogfs - Syslog File-System
 
 def main():
     version = "%prog " + fuse.__version__
-    server  = SyslogFS(version=version, usage=usage(), dash_s_do='setsingle')
+    server  = RamFS(version=version, usage=usage(), dash_s_do='setsingle')
     args    = server.parse(errex=1)
     server.main()
 
