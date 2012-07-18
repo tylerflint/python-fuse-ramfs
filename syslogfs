@@ -158,11 +158,30 @@ class SyslogFS(fuse.Fuse):
     def symlink(self, path, newpath):
         print 'symlink path:%s newpath:%s' % (path, newpath)
 
-        return -errno.ENOSYS
+        source_node = self._node(path)
+        filename    = os.path.basename(newpath)
+        parent      = self._parent(newpath)
+
+        if not (parent or source_node):
+            return -errno.ENOENT
+
+        if not parent.type == Inode.DIR:
+            return -errno.ENOTDIR
+
+        node = Inode(Inode.LINK, filename, 0644 | stat.S_IFLNK, self.uid, self.gid)
+        node.data = path
+
+        parent.data.add(node)
 
     def readlink(self, path):
         print 'readlink path:%s' % path
-        return -errno.ENOSYS
+
+        node = self._node(path)
+
+        if not node:
+            return -errno.ENOENT
+
+        return node.data
 
     # --- Extra Attributes 
     def setxattr(self, path, name, value, flags):
