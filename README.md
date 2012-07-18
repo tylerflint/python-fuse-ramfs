@@ -1,4 +1,4 @@
-syslogfs
+ramfs
 ========
 
 FUSE filesystem that runs entirely in RAM
