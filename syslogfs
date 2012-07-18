@@ -114,15 +114,25 @@ class SyslogFS(fuse.Fuse):
 
     def chmod(self, path, mode):
         print 'chmod path:%s mode:%s' % (path, mode)
-        return -errno.ENOSYS    
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+        node.mode = mode
 
     def chown(self, path, uid, gid):
         print 'chown path:%s uid:%s gid:%s' % (path, uid, gid)
-        return -errno.ENOSYS
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+        node.uid = uid
+        node.gid = gid
 
     def utime(self, path, times):
         print 'utime path:%s times:%s' % (path, times)
-        return -errno.ENOSYS
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+        node.ctime = node.mtime = times[0]
 
     # --- Namespace 
     def unlink(self, path):
@@ -177,7 +187,6 @@ class SyslogFS(fuse.Fuse):
         print 'readlink path:%s' % path
 
         node = self._node(path)
-
         if not node:
             return -errno.ENOENT
 
@@ -186,19 +195,51 @@ class SyslogFS(fuse.Fuse):
     # --- Extra Attributes 
     def setxattr(self, path, name, value, flags):
         print 'setxattr path:%s name:%s value:%s flags:%s' % (path, name, value, flags)
-        return -errno.ENOSYS
+
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+
+        node.xattr[name] = value
+
 
     def getxattr(self, path, name, size):
         print 'getxattr path:%s name:%s size:%s' % (path, name, size)
-        return -errno.ENOSYS
+
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+
+        value = node.xattr.get(name, '')
+        if size == 0:   # We are asked for size of the value
+            return len(value)
+
+        return value
+
 
     def listxattr(self, path, size):
         print 'listxattr path:%s size:%s' % (path, size)
-        return -errno.ENOSYS
+
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+
+        attrs = node.xattr.keys()
+        if size == 0:
+            return len(attrs) + len(''.join(attrs))
+        return attrs
+
 
     def removexattr(self, path, name):
         print 'removexattr path:%s name:%s' % (path, name)
-        return -errno.ENOSYS
+
+        node = self._node(path)
+        if not node:
+            return -errno.ENOENT
+
+        if name in node.xattr:
+            del node.xattr[name]
+
 
     # --- Files 
 
@@ -218,8 +259,6 @@ class SyslogFS(fuse.Fuse):
         node = Inode(Inode.FILE, filename, mode, self.uid, self.gid)
         node.dev = dev
         parent.data.add(node)        
-
-        return -errno.ENOSYS
 
     def create(self, path, flags, mode):
         print 'create path:%s flags:%s mode:%s' % (path, flags, mode)
@@ -322,16 +361,18 @@ class SyslogFS(fuse.Fuse):
         parent_path = os.path.dirname(path)
         return self._node(parent_path)
 
-def main():
-    usage="""
+def usage():
+    usage = '''
 syslogfs - Syslog File-System
 
-""" + fuse.Fuse.fusage
-    server = SyslogFS(  version="%prog " + fuse.__version__,
-                        usage=usage,
-                        dash_s_do='setsingle')
-  
-    args = server.parse(errex=1)
+    '''
+    return usage
+
+
+def main():
+    version = "%prog " + fuse.__version__
+    server  = SyslogFS(version=version, usage=usage(), dash_s_do='setsingle')
+    args    = server.parse(errex=1)
     server.main()
 
 if __name__ == '__main__':
